@@ -3,97 +3,150 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import linprog
 
-# Sidebar instruksi
-st.sidebar.title("📘 Instruksi Penggunaan")
-st.sidebar.info("""
-1. Pilih model matematika dari tab di atas.
-2. Masukkan parameter sesuai kebutuhan.
-3. Hasil perhitungan dan grafik akan ditampilkan secara otomatis.
+st.set_page_config(layout="wide")
+st.sidebar.title("📘 Instruksi")
+st.sidebar.markdown("""
+Aplikasi ini memiliki 4 model matematika di bidang industri:
+
+1. **Optimasi Produksi (Linear Programming)**  
+2. **Model Persediaan (EOQ)**  
+3. **Model Antrian (M/M/1)**
+4. **Break-even Analysis**
+
+Silakan pilih tab di atas untuk mulai menggunakan model.
 """)
 
-# Tab menu utama
-tab1, tab2, tab3 = st.tabs(["🧮 Optimasi Produksi", "📦 EOQ (Persediaan)", "👥 Model Antrian"])
+# Tab Navigasi
+menu = st.tabs(["🔧 Optimasi Produksi", "📦 Model Persediaan (EOQ)", "⏳ Model Antrian (M/M/1)", "💰 Analisis Break-even"])
 
-# 1. Optimasi Produksi
-with tab1:
-    st.header("Model Optimasi Produksi")
-    st.write("Gunakan metode *Linear Programming* untuk menentukan jumlah produk yang maksimal dengan batasan sumber daya.")
+# ===============================
+# 1. Linear Programming (Optimasi Produksi)
+# ===============================
+with menu[0]:
+    st.header("🔧 Optimasi Produksi - Linear Programming")
+    st.markdown("Masukkan fungsi objektif dan kendala dalam bentuk kanonik.")
 
-    c = [-40, -60]  # Koefisien fungsi objektif (negatif karena linprog meminimalkan)
-    A = [[2, 3]]  # Koefisien kendala
-    b = [100]  # Batasan kendala
+    c1, c2 = st.columns(2)
+    with c1:
+        obj_coeffs = st.text_input("Koefisien Fungsi Objektif (misal: 3,5)", "3,5")
+    with c2:
+        obj_type = st.selectbox("Tipe Optimasi", ["Minimasi", "Maksimasi"])
 
-    res = linprog(c, A_ub=A, b_ub=b, bounds=[(0, None), (0, None)], method='highs')
-    
-    if res.success:
-        x, y = res.x
-        st.success(f"Jumlah Blender (x): {x:.2f}")
-        st.success(f"Jumlah Pemanggang Roti (y): {y:.2f}")
-        st.info(f"Total Keuntungan Maksimum: Rp{(-res.fun)*1000:,.0f}")
+    A = st.text_area("Koefisien Kendala (baris per kendala, pisahkan dengan koma)", "1,2\n3,1")
+    b = st.text_input("Nilai sisi kanan kendala (misal: 10,15)", "10,15")
 
-        # Visualisasi grafik batasan
-        st.subheader("Visualisasi Batasan")
-        x_vals = np.linspace(0, 60, 200)
-        y_vals = (100 - 2 * x_vals) / 3
-        plt.figure()
-        plt.plot(x_vals, y_vals, label="2x + 3y = 100")
-        plt.fill_between(x_vals, 0, y_vals, alpha=0.3)
-        plt.xlabel("Produk A (Blender)")
-        plt.ylabel("Produk B (Pemanggang Roti)")
-        plt.axhline(0)
-        plt.axvline(0)
-        plt.scatter(x, y, color='red', label='Solusi Optimal')
-        plt.legend()
-        st.pyplot(plt)
+    if st.button("🔍 Hitung Solusi"):
+        try:
+            c = np.array([float(x) for x in obj_coeffs.split(",")])
+            if obj_type == "Maksimasi":
+                c = -c
+            A_ub = np.array([[float(n) for n in row.split(",")] for row in A.strip().split("\n")])
+            b_ub = np.array([float(x) for x in b.split(",")])
 
-# 2. EOQ
-with tab2:
-    st.header("Model Persediaan EOQ")
-    D = st.number_input("Permintaan tahunan (D)", value=10000)
-    S = st.number_input("Biaya pemesanan (S)", value=50000)
-    H = st.number_input("Biaya penyimpanan/unit/tahun (H)", value=2000)
+            res = linprog(c, A_ub=A_ub, b_ub=b_ub, method='highs')
 
-    EOQ = np.sqrt((2 * D * S) / H)
-    st.success(f"Jumlah optimal pemesanan (EOQ): {EOQ:.2f} unit")
+            if res.success:
+                st.success("Solusi Optimal Ditemukan")
+                st.write("Nilai Variabel:", res.x)
+                st.write("Nilai Objektif:", (-res.fun) if obj_type == "Maksimasi" else res.fun)
+            else:
+                st.error("Gagal menemukan solusi. Periksa input Anda.")
+        except:
+            st.error("Terjadi kesalahan dalam input. Pastikan format angka benar.")
 
-    # Visualisasi kurva biaya total
-    st.subheader("Grafik Biaya Total vs Ukuran Pesanan")
-    Q = np.linspace(100, 2000, 200)
-    TC = (D/Q)*S + (Q/2)*H
-    plt.figure()
-    plt.plot(Q, TC, label='Total Cost')
-    plt.axvline(EOQ, color='red', linestyle='--', label='EOQ')
-    plt.xlabel("Ukuran Pesanan")
-    plt.ylabel("Biaya Total")
-    plt.legend()
-    st.pyplot(plt)
+# ===============================
+# 2. EOQ Model
+# ===============================
+with menu[1]:
+    st.header("📦 Model Persediaan - Economic Order Quantity (EOQ)")
 
-# 3. Antrian M/M/1
-with tab3:
-    st.header("Model Antrian M/M/1")
-    λ = st.number_input("Rata-rata kedatangan pelanggan per jam (λ)", value=10.0)
-    μ = st.number_input("Rata-rata pelayanan pelanggan per jam (μ)", value=12.0)
+    D = st.number_input("Permintaan Tahunan (D)", min_value=1.0, value=1000.0)
+    S = st.number_input("Biaya Pemesanan per Order (S)", min_value=0.0, value=50.0)
+    H = st.number_input("Biaya Penyimpanan per Unit per Tahun (H)", min_value=0.1, value=2.0)
 
-    if λ >= μ:
-        st.error("Sistem tidak stabil! λ harus lebih kecil dari μ.")
-    else:
-        ρ = λ / μ
-        L = ρ / (1 - ρ)
-        W = 1 / (μ - λ)
-        Wq = λ / (μ * (μ - λ))
+    if st.button("📈 Hitung EOQ"):
+        try:
+            Q = np.sqrt((2 * D * S) / H)
+            st.success(f"EOQ: {Q:.2f} unit per order")
+            N = D / Q
+            st.write(f"Frekuensi Pemesanan: {N:.2f} kali per tahun")
 
-        st.info(f"Tingkat Utilisasi Server (ρ): {ρ:.2f}")
-        st.info(f"Rata-rata pelanggan dalam sistem (L): {L:.2f}")
-        st.info(f"Rata-rata waktu dalam sistem (W): {W:.2f} jam")
-        st.info(f"Rata-rata waktu tunggu dalam antrean (Wq): {Wq:.2f} jam")
+            # Visualisasi
+            Q_vals = np.linspace(1, 2*Q, 200)
+            TC = (D/Q_vals)*S + (Q_vals/2)*H
+            fig, ax = plt.subplots()
+            ax.plot(Q_vals, TC, label='Total Cost')
+            ax.axvline(Q, color='red', linestyle='--', label='EOQ')
+            ax.set_xlabel('Order Quantity')
+            ax.set_ylabel('Total Cost')
+            ax.set_title('EOQ vs Total Cost')
+            ax.legend()
+            st.pyplot(fig)
+        except:
+            st.error("Input tidak valid.")
 
-        # Visualisasi utilisasi
-        st.subheader("Visualisasi Utilisasi Server")
-        mu_vals = np.linspace(λ + 0.1, 2*λ, 200)
-        rho_vals = λ / mu_vals
-        plt.figure()
-        plt.plot(mu_vals, rho_vals, label="Utilisasi (ρ)")
-        plt.axhline(1, color='red', linestyle='--')
-        plt.xlabel("μ (Kecepatan Pelayanan)")
-        plt.ylabel("ρ (Utilisasi)")
-        st.pyplot(plt)
+# ===============================
+# 3. Model Antrian M/M/1
+# ===============================
+with menu[2]:
+    st.header("⏳ Model Antrian (M/M/1)")
+    arrival = st.number_input("Laju Kedatangan (λ)", min_value=0.0, value=2.0)
+    service = st.number_input("Laju Pelayanan (μ)", min_value=0.1, value=4.0)
+
+    if st.button("📊 Hitung Kinerja Antrian"):
+        if arrival >= service:
+            st.error("Sistem tidak stabil: λ harus < μ")
+        else:
+            rho = arrival / service
+            L = rho / (1 - rho)
+            Lq = rho**2 / (1 - rho)
+            W = 1 / (service - arrival)
+            Wq = arrival / (service * (service - arrival))
+
+            st.success("Hasil Perhitungan:")
+            st.write(f"Tingkat Utilisasi (ρ): {rho:.2f}")
+            st.write(f"Jumlah rata-rata dalam sistem (L): {L:.2f}")
+            st.write(f"Jumlah rata-rata dalam antrian (Lq): {Lq:.2f}")
+            st.write(f"Waktu rata-rata dalam sistem (W): {W:.2f} satuan waktu")
+            st.write(f"Waktu rata-rata dalam antrian (Wq): {Wq:.2f} satuan waktu")
+
+            # Visualisasi
+            lambdas = np.linspace(0.1, service - 0.01, 100)
+            Lqs = (lambdas**2) / (service * (service - lambdas))
+            fig, ax = plt.subplots()
+            ax.plot(lambdas, Lqs)
+            ax.set_title("Lq terhadap Laju Kedatangan")
+            ax.set_xlabel("Laju Kedatangan (λ)")
+            ax.set_ylabel("Lq")
+            st.pyplot(fig)
+
+# ===============================
+# 4. Break-even Analysis
+# ===============================
+with menu[3]:
+    st.header("💰 Break-even Analysis")
+
+    FC = st.number_input("Fixed Cost (Biaya Tetap)", value=10000.0)
+    VC = st.number_input("Variable Cost per unit (Biaya Variabel)", value=50.0)
+    P = st.number_input("Selling Price per unit (Harga Jual)", value=100.0)
+
+    if st.button("🧮 Hitung Break-even Point"):
+        if P <= VC:
+            st.error("Harga jual harus lebih besar dari biaya variabel!")
+        else:
+            BEP_units = FC / (P - VC)
+            st.success(f"Break-even Point: {BEP_units:.2f} unit")
+
+            x = np.linspace(0, BEP_units*2, 100)
+            total_cost = FC + VC * x
+            total_revenue = P * x
+
+            fig, ax = plt.subplots()
+            ax.plot(x, total_cost, label='Total Cost')
+            ax.plot(x, total_revenue, label='Total Revenue')
+            ax.axvline(BEP_units, color='red', linestyle='--', label='Break-even Point')
+            ax.set_xlabel('Jumlah Unit')
+            ax.set_ylabel('Rupiah')
+            ax.set_title('Analisis Break-even')
+            ax.legend()
+            st.pyplot(fig)
