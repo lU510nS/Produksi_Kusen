@@ -16,10 +16,10 @@ total_waktu = st.number_input("Total Waktu Produksi per Minggu (jam)", value=48)
 # Konversi jam ke menit
 total_menit = total_waktu * 60
 
-# Fungsi objektif (maksimasi → minimisasi)
+# Fungsi objektif untuk maksimisasi (linprog → minimisasi → dikalikan -1)
 c = [-keuntungan_meja, -keuntungan_kursi]
 
-# Kendala: waktu produksi
+# Kendala: waktu produksi meja dan kursi tidak boleh melebihi waktu total
 A = [[waktu_meja, waktu_kursi]]
 b = [total_menit]
 
@@ -27,23 +27,40 @@ b = [total_menit]
 x_bounds = (0, None)
 y_bounds = (0, None)
 
-# Optimasi dengan linprog
+# Optimasi
 result = linprog(c, A_ub=A, b_ub=b, bounds=[x_bounds, y_bounds], method='highs')
 
 # Tampilkan hasil
 if result.success:
+    # Hasil dari linprog
     x_real = result.x[0]
     y_real = result.x[1]
-    # Bulatkan ke bawah agar tetap feasible
-    x_int = math.floor(x_real)
-    y_int = math.floor(y_real)
-    total_profit = keuntungan_meja * x_int + keuntungan_kursi * y_int
-    total_unit = x_int + y_int
 
-    st.subheader("Hasil Optimasi Produksi:")
-    st.write(f"Jumlah Meja yang diproduksi: **{x_int}** unit")
-    st.write(f"Jumlah Kursi yang diproduksi: **{y_int}** unit")
+    # Bulatkan ke bawah agar tetap feasible
+    x = math.floor(x_real)
+    y = math.floor(y_real)
+
+    # Hitung total waktu yang digunakan dan sisa
+    waktu_digunakan = (x * waktu_meja) + (y * waktu_kursi)
+    sisa_waktu = total_menit - waktu_digunakan
+
+    # Hitung keuntungan
+    profit_meja = x * keuntungan_meja
+    profit_kursi = y * keuntungan_kursi
+    total_profit = profit_meja + profit_kursi
+    total_unit = x + y
+
+    # Tampilkan hasil
+    st.subheader("Hasil Optimasi Produksi")
+    st.write(f"Jumlah Meja yang diproduksi: **{x}** unit")
+    st.write(f"Jumlah Kursi yang diproduksi: **{y}** unit")
     st.write(f"Total Unit Diproduksi: **{total_unit}** unit")
-    st.write(f"Total Keuntungan Maksimal: **Rp {total_profit:,.0f}**")
+    st.write(f"Total Waktu Produksi yang Digunakan: **{waktu_digunakan} menit**")
+    st.write(f"Sisa Waktu Produksi: **{sisa_waktu} menit**")
+
+    st.subheader("Rincian Keuntungan")
+    st.write(f"Keuntungan dari Meja: **Rp {profit_meja:,.0f}**")
+    st.write(f"Keuntungan dari Kursi: **Rp {profit_kursi:,.0f}**")
+    st.success(f"Total Keuntungan Maksimal: **Rp {total_profit:,.0f}**")
 else:
     st.error("Optimasi gagal dilakukan.")
