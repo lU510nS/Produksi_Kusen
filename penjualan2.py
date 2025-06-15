@@ -51,16 +51,16 @@ if result.success:
     total_unit = x + y
 
     # Tampilkan hasil
-    st.subheader("Hasil Optimasi Produksi")
-    st.write(f"Jumlah Meja yang diproduksi: **{x}** unit")
-    st.write(f"Jumlah Kursi yang diproduksi: **{y}** unit")
-    st.write(f"Total Unit Diproduksi: **{total_unit}** unit")
-    st.write(f"Total Waktu Produksi yang Digunakan: **{waktu_digunakan} menit**")
-    st.write(f"Sisa Waktu Produksi: **{sisa_waktu} menit**")
+    st.subheader("📦 Hasil Produksi Optimal")
+    st.write(f"- Jumlah Meja yang diproduksi: **{x} unit**")
+    st.write(f"- Jumlah Kursi yang diproduksi: **{y} unit**")
+    st.write(f"- Total Unit Diproduksi: **{total_unit} unit**")
+    st.write(f"- Total Waktu Digunakan: **{waktu_digunakan} menit**")
+    st.write(f"- Sisa Waktu Tersedia: **{sisa_waktu} menit**")
 
-    st.subheader("Rincian Keuntungan")
-    st.write(f"Keuntungan dari Meja: **Rp {profit_meja:,.0f}**")
-    st.write(f"Keuntungan dari Kursi: **Rp {profit_kursi:,.0f}**")
-    st.success(f"Total Keuntungan Maksimal: **Rp {total_profit:,.0f}**")
+    st.subheader("💰 Rincian Keuntungan")
+    st.write(f"- Keuntungan per Meja: **Rp {keuntungan_meja:,.0f}** × {x} = **Rp {profit_meja:,.0f}**")
+    st.write(f"- Keuntungan per Kursi: **Rp {keuntungan_kursi:,.0f}** × {y} = **Rp {profit_kursi:,.0f}**")
+    st.success(f"🎯 Total Keuntungan Maksimal: **Rp {total_profit:,.0f}**")
 else:
     st.error("Optimasi gagal dilakukan.")
